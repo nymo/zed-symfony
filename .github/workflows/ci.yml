@@ -13,10 +13,13 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-wasip2
-          components: rustfmt
+          components: rustfmt, clippy
 
       - name: Check formatting
         run: cargo fmt --all -- --check
+
+      - name: Lint with Clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
 
       - name: Test native LSP
         run: cargo test -p symfony-lsp

@@ -1,6 +1,6 @@
 # Symfony Zed extension architecture
 
-Phase 0 architecture decision.
+Architecture overview.
 
 ## Decision
 
@@ -11,21 +11,28 @@ The extension and server should begin in the same repository as separate Cargo c
 ```text
 zed-symfony/
 ├── extension.toml
-├── Cargo.toml                 # Zed extension, compiled to WASM
+├── Cargo.toml                 # Zed extension (workspace root), compiled to WASM
 ├── src/
 │   └── lib.rs                 # launcher and Zed integration
 ├── symfony-lsp/
 │   ├── Cargo.toml             # native executable
-│   └── src/
-│       ├── main.rs
-│       ├── server.rs
-│       ├── index.rs
-│       ├── parser/
-│       ├── routing/
-│       ├── services/
-│       ├── twig/
-│       └── diagnostics/
-├── fixtures/
+│   ├── src/
+│   │   ├── main.rs
+│   │   ├── server.rs
+│   │   ├── lsp_helpers.rs
+│   │   ├── index.rs
+│   │   ├── index/
+│   │   │   ├── parser.rs
+│   │   │   ├── project.rs
+│   │   │   ├── doctrine.rs
+│   │   │   └── forms_twig.rs
+│   │   └── server/
+│   │       ├── code_actions.rs
+│   │       └── diagnostics.rs
+│   └── tests/
+│       └── lsp_e2e.rs
+├── scripts/
+│   └── lsp_smoke.py
 ├── docs/
 └── .github/workflows/
 ```
@@ -72,7 +79,6 @@ The initial server must not boot the Symfony application or execute project PHP 
 
 - `composer.json`
 - `composer.lock`
-- `vendor/composer`
 - PHP source and attributes
 - YAML, XML, and PHP configuration
 - Twig templates
@@ -91,7 +97,7 @@ Runtime-assisted inspection can be added later as an explicit opt-in mode, witho
 
 ## Language ownership and coexistence
 
-The Symfony extension must not add a `languages/` directory or grammar definitions in its first version.
+The Symfony extension does not add a `languages/` directory or grammar definitions; it attaches to Zed's existing language IDs.
 
 | Language | Existing provider | Symfony behavior |
 | --- | --- | --- |
@@ -101,7 +107,7 @@ The Symfony extension must not add a `languages/` directory or grammar definitio
 | `XML` | `zed-xml` | Index Symfony service/configuration files |
 | `Env` | `zed-env` | Index environment keys and references |
 
-Twig is the main integration risk because `zed-twig` already registers Twiggy as a language server. Phase 1 must test whether both servers can run usefully together and whether duplicate completion, hover, diagnostics, or semantic-token responses need to be narrowed. The Symfony server should not replace Twiggy's generic Twig syntax support.
+Twig is an integration risk because `zed-twig` already registers Twiggy as a language server. Coexistence and duplicate completion/hover/diagnostic behavior still require a Zed fixture test. The Symfony server should not replace Twiggy's generic Twig syntax support.
 
 The PHP extension also exposes several PHP language servers. The Symfony server should be framework-specific and remain compatible with a user-selected generic PHP server rather than trying to become a replacement.
 
@@ -115,17 +121,19 @@ name = "Symfony"
 languages = ["PHP", "Twig", "YAML", "XML", "Env"]
 ```
 
-The exact manifest field shape and multi-server behavior must be checked against the Zed extension API during Phase 1. The important architectural constraint is that these are existing language IDs owned by other providers; Symfony does not claim their grammars.
+The manifest uses Zed's `language_servers` registration for existing language IDs. The important architectural constraint is that these languages are owned by other providers; Symfony does not claim their grammars. PHP rename routing remains subject to Zed's primary-server selection (see `docs/compatibility.md`).
 
 ## Version handling
 
-The server targets Symfony 6.4, 7.4, and 8.1. It should:
+The server targets Symfony 6.4, 7.4, and 8.1. It:
 
-1. Read installed Symfony component versions from `composer.lock`.
-2. Fall back to `composer.json` only when lock data is unavailable.
-3. Detect optional components independently.
-4. Select version-sensitive parsers and diagnostics conservatively.
-5. Mark unknown framework relationships as unresolved instead of guessing.
+1. Reads the installed Symfony version from `composer.lock`.
+2. Falls back to the `composer.json` constraint only when lock data is unavailable.
+3. Detects optional components independently.
+4. Leaves version-sensitive behavior disabled when the version is unknown or below the 6.4 baseline.
+5. Marks unknown framework relationships as unresolved instead of guessing.
+
+v1 has no version-gated rules yet, so the detected version is recorded and logged rather than changing analysis.
 
 ## Release boundary
 
@@ -140,7 +148,9 @@ The extension should pin the LSP version it launches and validate downloaded rel
 
 ## Testing strategy
 
-The native LSP should have fast unit tests and fixture-based integration tests for:
+The native LSP has fast unit tests plus end-to-end LSP tests in
+`symfony-lsp/tests/lsp_e2e.rs`, which spawn the real server and drive it over
+stdio JSON-RPC. Coverage includes:
 
 - Composer and Symfony version detection.
 - PHP attributes and class indexing.
@@ -148,7 +158,10 @@ The native LSP should have fast unit tests and fixture-based integration tests f
 - Twig template relationships.
 - Environment variables.
 - YAML/XML/PHP service definitions.
-- Incremental updates and watched files.
+- Watched-file updates and multi-file edits.
 - Conservative behavior when metadata is ambiguous.
 
-Zed-specific integration tests should cover extension installation, server launch, language IDs, coexistence with Twiggy and a PHP LSP, and the supported editor capabilities listed in the feature matrix.
+Zed-specific integration tests still need to cover extension installation,
+server launch, language IDs, coexistence with Twiggy and a PHP LSP, and the
+supported editor capabilities listed in the feature matrix; see
+[`zed-integration.md`](zed-integration.md).

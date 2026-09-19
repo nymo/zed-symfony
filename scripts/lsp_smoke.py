@@ -55,6 +55,7 @@ def read_response(stream, request_id: int) -> dict:
 
 def main() -> int:
     server = Path(sys.argv[1]) if len(sys.argv) > 1 else DEFAULT_SERVER
+    workspace = Path(sys.argv[2]).resolve() if len(sys.argv) > 2 else Path("/tmp/symfony-fixture")
     process = subprocess.Popen(
         [str(server)],
         stdin=subprocess.PIPE,
@@ -71,7 +72,7 @@ def main() -> int:
                 "method": "initialize",
                 "params": {
                     "processId": None,
-                    "rootUri": "file:///tmp/symfony-fixture",
+                    "rootUri": workspace.as_uri(),
                     "capabilities": {},
                 },
             },

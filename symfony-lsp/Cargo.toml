@@ -3,7 +3,7 @@ name = "symfony-lsp"
 version = "0.1.0"
 edition = "2021"
 authors = ["Symfony Zed contributors"]
-license = "MIT"
+license = "GPL-3.0-only"
 description = "Native Symfony language server"
 
 [[bin]]
@@ -13,6 +13,7 @@ path = "src/main.rs"
 [dependencies]
 tokio = { version = "1.52", features = ["io-std", "macros", "rt-multi-thread"] }
 tower-lsp = "0.20"
+serde_json = "1"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 

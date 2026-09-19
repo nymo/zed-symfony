@@ -1,3 +1,5 @@
+mod index;
+mod lsp_helpers;
 mod server;
 
 use std::env;

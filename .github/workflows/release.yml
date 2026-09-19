@@ -1,0 +1,133 @@
+name: Release
+
+# Publishes version-matched native server assets for the platforms the Zed
+# launcher expects. The tag must equal the extension version (for example
+# `0.1.0`), because the launcher downloads from
+# `releases/download/<version>/symfony-lsp-<platform>.<ext>`.
+on:
+  push:
+    tags:
+      - "[0-9]+.[0-9]+.[0-9]+"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-wasip2
+          components: rustfmt, clippy
+
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+      - name: Lint with Clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: Test native LSP
+        run: cargo test -p symfony-lsp
+
+      - name: Check Zed extension for WASI
+        run: cargo check -p symfony-zed --target wasm32-wasip2
+
+      - name: Check tag matches the extension version
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          set -euo pipefail
+          version=$(cargo metadata --no-deps --format-version 1 \
+            | jq -r '.packages[] | select(.name == "symfony-zed") | .version')
+          if [ "$version" != "${GITHUB_REF_NAME}" ]; then
+            echo "Tag '${GITHUB_REF_NAME}' must equal the symfony-zed version '${version}'." >&2
+            exit 1
+          fi
+
+  build:
+    needs: verify
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # macOS: build both architectures on the arm64 runner.
+          - runner: macos-14
+            target: aarch64-apple-darwin
+            asset: symfony-lsp-macos-arm64
+            archive: tar.gz
+          - runner: macos-14
+            target: x86_64-apple-darwin
+            asset: symfony-lsp-macos-x64
+            archive: tar.gz
+          # Linux: native x64 and native arm64 runners.
+          - runner: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            asset: symfony-lsp-linux-x64
+            archive: tar.gz
+          - runner: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
+            asset: symfony-lsp-linux-arm64
+            archive: tar.gz
+          # Windows: native x64 and native arm64 runners.
+          - runner: windows-latest
+            target: x86_64-pc-windows-msvc
+            asset: symfony-lsp-windows-x64.exe
+            archive: zip
+          - runner: windows-11-arm
+            target: aarch64-pc-windows-msvc
+            asset: symfony-lsp-windows-arm64.exe
+            archive: zip
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Build native LSP
+        run: cargo build -p symfony-lsp --release --locked --target ${{ matrix.target }}
+
+      - name: Package (tar.gz)
+        if: matrix.archive == 'tar.gz'
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp "target/${{ matrix.target }}/release/symfony-lsp" "${{ matrix.asset }}"
+          tar -czf "${{ matrix.asset }}.tar.gz" "${{ matrix.asset }}"
+          tar -tzf "${{ matrix.asset }}.tar.gz"
+
+      - name: Package (zip)
+        if: matrix.archive == 'zip'
+        shell: pwsh
+        run: |
+          Copy-Item "target/${{ matrix.target }}/release/symfony-lsp.exe" "${{ matrix.asset }}"
+          Compress-Archive -Path "${{ matrix.asset }}" -DestinationPath "${{ matrix.asset }}.zip"
+          Get-ChildItem "${{ matrix.asset }}.zip"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset }}
+          path: ${{ matrix.asset }}.${{ matrix.archive }}
+          if-no-files-found: error
+
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: List release assets
+        run: ls -l dist
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true

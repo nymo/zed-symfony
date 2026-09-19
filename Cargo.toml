@@ -3,7 +3,7 @@ name = "symfony-zed"
 version = "0.1.0"
 edition = "2021"
 authors = ["Symfony Zed contributors"]
-license = "MIT"
+license = "GPL-3.0-only"
 description = "Symfony framework intelligence for Zed"
 
 [lib]
