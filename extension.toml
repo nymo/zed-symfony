@@ -4,7 +4,7 @@ version = "0.1.0"
 schema_version = 1
 authors = ["Symfony Zed contributors"]
 description = "Symfony framework intelligence for Zed"
-repository = "https://github.com/panek/zed-symfony"
+repository = "https://github.com/nymo/zed-symfony"
 
 [lib]
 kind = "Rust"
