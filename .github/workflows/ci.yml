@@ -1,0 +1,28 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-wasip2
+          components: rustfmt
+
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+      - name: Test native LSP
+        run: cargo test -p symfony-lsp
+
+      - name: Check Zed extension for WASI
+        run: cargo check -p symfony-zed --target wasm32-wasip2
+
+      - name: Build native LSP
+        run: cargo build -p symfony-lsp --release

@@ -1,0 +1,18 @@
+[package]
+name = "symfony-lsp"
+version = "0.1.0"
+edition = "2021"
+authors = ["Symfony Zed contributors"]
+license = "MIT"
+description = "Native Symfony language server"
+
+[[bin]]
+name = "symfony-lsp"
+path = "src/main.rs"
+
+[dependencies]
+tokio = { version = "1.52", features = ["io-std", "macros", "rt-multi-thread"] }
+tower-lsp = "0.20"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+
