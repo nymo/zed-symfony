@@ -9,7 +9,6 @@
 
 Symfony for Zed is a native Rust language server launched by a small Zed extension. It understands the relationships between your routes, templates, services, translations, environment variables, Doctrine entities, and Twig components, and it complements your existing PHP and Twig tooling instead of replacing it.
 
-> **Status: pre-release.** The core static features are implemented, and end-to-end LSP behavior and the PHP rename policy are covered by automated tests. Verifying multi-server behavior and watcher delivery in a real Zed window, and publishing the first release assets, remain open. See the [public release scope](docs/release-scope.md) before relying on a feature in production.
 
 ## Table of contents
 
