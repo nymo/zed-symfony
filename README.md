@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/nymo/zed-symfony/actions/workflows/ci.yml/badge.svg)](https://github.com/nymo/zed-symfony/actions/workflows/ci.yml)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
-![GitHub Tag](https://img.shields.io/github/v/tag/nymo/zed-symfony)
+![GitHub Release](https://img.shields.io/github/v/release/nymo/zed-symfony)
 [![Zed extension](https://img.shields.io/badge/Zed-extension-1f6feb.svg)](https://zed.dev/extensions)
 
 **Framework-aware navigation, completion, hover, and diagnostics for Symfony projects in [Zed](https://zed.dev).**
